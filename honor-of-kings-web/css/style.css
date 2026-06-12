@@ -1,0 +1,178 @@
+/* 王者竞技场 —— 三端响应式样式 */
+* { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+
+html, body {
+  width: 100%; height: 100%;
+  overflow: hidden;
+  background: #0b1220;
+  color: #e5e7eb;
+  font-family: "PingFang SC", "Microsoft YaHei", system-ui, sans-serif;
+  touch-action: none;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+#game { position: fixed; inset: 0; display: block; }
+
+.hidden { display: none !important; }
+
+/* ---------- 全屏界面（选人 / 结算） ---------- */
+.screen {
+  position: fixed; inset: 0; z-index: 20;
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  gap: 14px; padding: 20px;
+  background: radial-gradient(ellipse at center, #15233f 0%, #0b1220 75%);
+  overflow-y: auto;
+}
+.screen h1 {
+  font-size: clamp(28px, 6vw, 48px);
+  background: linear-gradient(180deg, #fde68a, #d97706);
+  -webkit-background-clip: text; background-clip: text; color: transparent;
+  letter-spacing: 6px;
+}
+.subtitle { color: #94a3b8; font-size: 14px; }
+.screen h2 { font-size: 18px; color: #cbd5e1; }
+
+#hero-list { display: flex; gap: 12px; flex-wrap: wrap; justify-content: center; }
+.hero-card {
+  width: 150px; padding: 14px 10px;
+  border: 2px solid #334155; border-radius: 12px;
+  background: #111c33; text-align: center; cursor: pointer;
+  transition: transform .15s, border-color .15s;
+}
+.hero-card:hover { transform: translateY(-3px); }
+.hero-card.selected { border-color: #fbbf24; box-shadow: 0 0 18px rgba(251,191,36,.35); }
+.hero-card .avatar {
+  width: 64px; height: 64px; border-radius: 50%;
+  margin: 0 auto 8px; border: 3px solid currentColor;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 26px; font-weight: 700; background: #0b1220;
+}
+.hero-card .role { color: #fbbf24; font-size: 12px; margin: 4px 0; }
+.hero-card .desc { color: #94a3b8; font-size: 11px; line-height: 1.5; }
+
+.big-btn {
+  padding: 12px 56px; font-size: 20px; font-weight: 700;
+  color: #1f1303; border: none; border-radius: 999px; cursor: pointer;
+  background: linear-gradient(180deg, #fde68a, #d97706);
+  box-shadow: 0 4px 18px rgba(217,119,6,.45);
+}
+.big-btn:active { transform: scale(.96); }
+.small-btn {
+  padding: 6px 16px; font-size: 13px; color: #cbd5e1;
+  background: #1e293b; border: 1px solid #475569; border-radius: 8px; cursor: pointer;
+}
+.sync-box { display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; max-width: 480px; }
+#sync-code {
+  width: 100%; height: 56px; resize: none;
+  background: #0f172a; color: #94a3b8; border: 1px solid #334155;
+  border-radius: 8px; padding: 8px; font-size: 11px;
+}
+.help-text { color: #64748b; font-size: 12px; text-align: center; line-height: 1.8; }
+#profile-bar { color: #94a3b8; font-size: 13px; }
+#profile-bar b { color: #fbbf24; }
+
+#end-screen h1.win { color: #fbbf24; -webkit-text-fill-color: currentColor; }
+#end-screen h1.lose { color: #94a3b8; -webkit-text-fill-color: currentColor; }
+#end-stats { color: #cbd5e1; font-size: 15px; line-height: 2; text-align: center; }
+
+/* ---------- 对局 HUD ---------- */
+#hud { position: fixed; inset: 0; z-index: 10; pointer-events: none; }
+
+#top-bar {
+  position: absolute; top: calc(6px + env(safe-area-inset-top)); left: 50%; transform: translateX(-50%);
+  display: flex; gap: 18px; align-items: center;
+  background: rgba(11,18,32,.75); padding: 6px 22px; border-radius: 999px;
+  font-size: 16px; font-weight: 700;
+}
+.score.blue { color: #60a5fa; } .score.red { color: #f87171; }
+#game-timer { color: #cbd5e1; font-size: 14px; font-weight: 400; }
+
+#kill-feed {
+  position: absolute; top: calc(52px + env(safe-area-inset-top)); left: 50%; transform: translateX(-50%);
+  display: flex; flex-direction: column; gap: 4px; align-items: center;
+}
+#kill-feed div {
+  background: rgba(11,18,32,.7); color: #fbbf24;
+  font-size: 12px; padding: 3px 14px; border-radius: 999px;
+}
+
+#status-panel {
+  position: absolute; left: calc(12px + env(safe-area-inset-left)); top: calc(10px + env(safe-area-inset-top));
+  width: min(230px, 38vw);
+}
+.bar { height: 14px; border-radius: 7px; background: rgba(0,0,0,.55); overflow: hidden; margin-bottom: 4px; }
+.bar > div { height: 100%; width: 100%; transition: width .15s; border-radius: 7px; }
+.bar.hp > div { background: linear-gradient(180deg, #4ade80, #16a34a); }
+.bar.mp > div { background: linear-gradient(180deg, #60a5fa, #2563eb); }
+#hero-meta { color: #cbd5e1; font-size: 12px; text-shadow: 0 1px 2px #000; }
+#hero-meta b { color: #fbbf24; }
+
+/* 虚拟摇杆（左下） */
+#joystick-zone {
+  position: absolute; left: 0; bottom: 0;
+  width: 45%; height: 55%; pointer-events: auto;
+}
+#joystick-base {
+  position: absolute; left: calc(30px + env(safe-area-inset-left)); bottom: calc(30px + env(safe-area-inset-bottom));
+  width: 120px; height: 120px; border-radius: 50%;
+  background: rgba(148,163,184,.12); border: 2px solid rgba(148,163,184,.35);
+  opacity: .55;
+}
+#joystick-base.active { opacity: 1; }
+#joystick-knob {
+  position: absolute; left: 50%; top: 50%;
+  width: 52px; height: 52px; border-radius: 50%;
+  background: rgba(226,232,240,.55);
+  transform: translate(-50%, -50%);
+}
+
+/* 技能按钮区（右下，扇形布局） */
+#action-panel {
+  position: absolute; right: calc(18px + env(safe-area-inset-right)); bottom: calc(18px + env(safe-area-inset-bottom));
+  width: 200px; height: 190px; pointer-events: auto;
+}
+#btn-attack {
+  position: absolute; right: 0; bottom: 0;
+  width: 84px; height: 84px; border-radius: 50%;
+  border: 3px solid #fbbf24; background: rgba(251,191,36,.22);
+  color: #fde68a; font-size: 16px; font-weight: 700; cursor: pointer;
+}
+#btn-attack:active { background: rgba(251,191,36,.5); }
+.skill-btn {
+  position: absolute; width: 56px; height: 56px; border-radius: 50%;
+  border: 2px solid #64748b; background: rgba(30,41,59,.85);
+  color: #e2e8f0; font-size: 11px; cursor: pointer; overflow: hidden;
+}
+.skill-btn b { position: relative; z-index: 2; font-size: 10px; }
+.skill-btn[data-skill="0"] { right: 104px; bottom: 6px; }
+.skill-btn[data-skill="1"] { right: 88px; bottom: 78px; }
+.skill-btn[data-skill="2"] { right: 18px; bottom: 102px; }
+#btn-recall { right: 152px; bottom: 60px; width: 44px; height: 44px; font-size: 10px; }
+.skill-btn .cd {
+  position: absolute; inset: 0; z-index: 1;
+  background: rgba(0,0,0,.72);
+  display: flex; align-items: center; justify-content: center;
+  color: #fff; font-size: 15px; font-weight: 700;
+  transform: scaleY(0); transform-origin: bottom;
+}
+.skill-btn.ready { border-color: #fbbf24; }
+.skill-btn.noMana { border-color: #2563eb; }
+
+#respawn-overlay {
+  position: absolute; left: 50%; top: 40%; transform: translate(-50%, -50%);
+  background: rgba(0,0,0,.75); color: #f87171;
+  padding: 14px 30px; border-radius: 12px; font-size: 18px;
+}
+
+/* 小屏适配 */
+@media (max-width: 640px) {
+  #status-panel { width: 36vw; }
+  .bar { height: 10px; }
+  #action-panel { transform: scale(.88); transform-origin: bottom right; }
+  .hero-card { width: 124px; }
+}
+/* 桌面端弱化摇杆提示 */
+@media (hover: hover) and (pointer: fine) {
+  #joystick-base { opacity: .25; }
+}

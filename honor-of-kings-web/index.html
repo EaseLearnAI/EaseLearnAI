@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<title>王者竞技场 · 网页版 MOBA</title>
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+<canvas id="game"></canvas>
+
+<!-- 英雄选择界面 -->
+<div id="select-screen" class="screen">
+  <h1>王者竞技场</h1>
+  <p class="subtitle">网页版 MOBA · 手机 / 平板 / 电脑 三端通玩</p>
+  <div id="profile-bar"></div>
+  <h2>选择你的英雄</h2>
+  <div id="hero-list"></div>
+  <button id="btn-start" class="big-btn">开始对战</button>
+  <div class="sync-box">
+    <button id="btn-export" class="small-btn">导出同步码</button>
+    <button id="btn-import" class="small-btn">导入同步码</button>
+    <textarea id="sync-code" placeholder="同步码：导出后复制到其他设备导入，即可同步战绩"></textarea>
+  </div>
+  <p class="help-text">
+    电脑端：WASD 移动 · 空格/J 普攻 · K L U 技能 · B 回城<br>
+    手机/平板：左侧摇杆移动 · 右侧按钮攻击与技能
+  </p>
+</div>
+
+<!-- 对局结束界面 -->
+<div id="end-screen" class="screen hidden">
+  <h1 id="end-title">胜利</h1>
+  <div id="end-stats"></div>
+  <button id="btn-again" class="big-btn">再来一局</button>
+</div>
+
+<!-- 对局内 HUD -->
+<div id="hud" class="hidden">
+  <div id="top-bar">
+    <span id="score-blue" class="score blue">0</span>
+    <span id="game-timer">00:00</span>
+    <span id="score-red" class="score red">0</span>
+  </div>
+  <div id="kill-feed"></div>
+  <div id="status-panel">
+    <div class="bar-row"><div id="hp-bar" class="bar hp"><div></div></div></div>
+    <div class="bar-row"><div id="mp-bar" class="bar mp"><div></div></div></div>
+    <div id="hero-meta"></div>
+  </div>
+  <div id="joystick-zone">
+    <div id="joystick-base"><div id="joystick-knob"></div></div>
+  </div>
+  <div id="action-panel">
+    <button class="skill-btn" id="btn-recall" title="回城 (B)">回城</button>
+    <button class="skill-btn" data-skill="0"><span class="cd"></span><b></b></button>
+    <button class="skill-btn" data-skill="1"><span class="cd"></span><b></b></button>
+    <button class="skill-btn" data-skill="2"><span class="cd"></span><b></b></button>
+    <button id="btn-attack" title="普攻 (空格/J)">攻击</button>
+  </div>
+  <div id="respawn-overlay" class="hidden">已阵亡，<span id="respawn-count"></span> 秒后复活</div>
+</div>
+
+<script type="module" src="js/main.js"></script>
+</body>
+</html>
