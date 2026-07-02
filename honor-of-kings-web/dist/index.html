@@ -1,0 +1,1653 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<title>王者竞技场 · 网页版 MOBA</title>
+<style>
+/* 王者竞技场 —— 三端响应式样式 */
+* { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+
+html, body {
+  width: 100%; height: 100%;
+  overflow: hidden;
+  background: #0b1220;
+  color: #e5e7eb;
+  font-family: "PingFang SC", "Microsoft YaHei", system-ui, sans-serif;
+  touch-action: none;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+#game { position: fixed; inset: 0; display: block; }
+
+.hidden { display: none !important; }
+
+/* ---------- 全屏界面（选人 / 结算） ---------- */
+.screen {
+  position: fixed; inset: 0; z-index: 20;
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  gap: 14px; padding: 20px;
+  background: radial-gradient(ellipse at center, #15233f 0%, #0b1220 75%);
+  overflow-y: auto;
+}
+.screen h1 {
+  font-size: clamp(28px, 6vw, 48px);
+  background: linear-gradient(180deg, #fde68a, #d97706);
+  -webkit-background-clip: text; background-clip: text; color: transparent;
+  letter-spacing: 6px;
+}
+.subtitle { color: #94a3b8; font-size: 14px; }
+.screen h2 { font-size: 18px; color: #cbd5e1; }
+
+#hero-list { display: flex; gap: 12px; flex-wrap: wrap; justify-content: center; }
+.hero-card {
+  width: 150px; padding: 14px 10px;
+  border: 2px solid #334155; border-radius: 12px;
+  background: #111c33; text-align: center; cursor: pointer;
+  transition: transform .15s, border-color .15s;
+}
+.hero-card:hover { transform: translateY(-3px); }
+.hero-card.selected { border-color: #fbbf24; box-shadow: 0 0 18px rgba(251,191,36,.35); }
+.hero-card .avatar {
+  width: 64px; height: 64px; border-radius: 50%;
+  margin: 0 auto 8px; border: 3px solid currentColor;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 26px; font-weight: 700; background: #0b1220;
+}
+.hero-card .role { color: #fbbf24; font-size: 12px; margin: 4px 0; }
+.hero-card .desc { color: #94a3b8; font-size: 11px; line-height: 1.5; }
+
+.big-btn {
+  padding: 12px 56px; font-size: 20px; font-weight: 700;
+  color: #1f1303; border: none; border-radius: 999px; cursor: pointer;
+  background: linear-gradient(180deg, #fde68a, #d97706);
+  box-shadow: 0 4px 18px rgba(217,119,6,.45);
+}
+.big-btn:active { transform: scale(.96); }
+.small-btn {
+  padding: 6px 16px; font-size: 13px; color: #cbd5e1;
+  background: #1e293b; border: 1px solid #475569; border-radius: 8px; cursor: pointer;
+}
+.sync-box { display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; max-width: 480px; }
+#sync-code {
+  width: 100%; height: 56px; resize: none;
+  background: #0f172a; color: #94a3b8; border: 1px solid #334155;
+  border-radius: 8px; padding: 8px; font-size: 11px;
+}
+.help-text { color: #64748b; font-size: 12px; text-align: center; line-height: 1.8; }
+#profile-bar { color: #94a3b8; font-size: 13px; }
+#profile-bar b { color: #fbbf24; }
+
+#end-screen h1.win { color: #fbbf24; -webkit-text-fill-color: currentColor; }
+#end-screen h1.lose { color: #94a3b8; -webkit-text-fill-color: currentColor; }
+#end-stats { color: #cbd5e1; font-size: 15px; line-height: 2; text-align: center; }
+
+/* ---------- 对局 HUD ---------- */
+#hud { position: fixed; inset: 0; z-index: 10; pointer-events: none; }
+
+#top-bar {
+  position: absolute; top: calc(6px + env(safe-area-inset-top)); left: 50%; transform: translateX(-50%);
+  display: flex; gap: 18px; align-items: center;
+  background: rgba(11,18,32,.75); padding: 6px 22px; border-radius: 999px;
+  font-size: 16px; font-weight: 700;
+}
+.score.blue { color: #60a5fa; } .score.red { color: #f87171; }
+#game-timer { color: #cbd5e1; font-size: 14px; font-weight: 400; }
+
+#kill-feed {
+  position: absolute; top: calc(52px + env(safe-area-inset-top)); left: 50%; transform: translateX(-50%);
+  display: flex; flex-direction: column; gap: 4px; align-items: center;
+}
+#kill-feed div {
+  background: rgba(11,18,32,.7); color: #fbbf24;
+  font-size: 12px; padding: 3px 14px; border-radius: 999px;
+}
+
+#status-panel {
+  position: absolute; left: calc(12px + env(safe-area-inset-left)); top: calc(10px + env(safe-area-inset-top));
+  width: min(230px, 38vw);
+}
+.bar { height: 14px; border-radius: 7px; background: rgba(0,0,0,.55); overflow: hidden; margin-bottom: 4px; }
+.bar > div { height: 100%; width: 100%; transition: width .15s; border-radius: 7px; }
+.bar.hp > div { background: linear-gradient(180deg, #4ade80, #16a34a); }
+.bar.mp > div { background: linear-gradient(180deg, #60a5fa, #2563eb); }
+#hero-meta { color: #cbd5e1; font-size: 12px; text-shadow: 0 1px 2px #000; }
+#hero-meta b { color: #fbbf24; }
+
+/* 虚拟摇杆（左下） */
+#joystick-zone {
+  position: absolute; left: 0; bottom: 0;
+  width: 45%; height: 55%; pointer-events: auto;
+}
+#joystick-base {
+  position: absolute; left: calc(30px + env(safe-area-inset-left)); bottom: calc(30px + env(safe-area-inset-bottom));
+  width: 120px; height: 120px; border-radius: 50%;
+  background: rgba(148,163,184,.12); border: 2px solid rgba(148,163,184,.35);
+  opacity: .55;
+}
+#joystick-base.active { opacity: 1; }
+#joystick-knob {
+  position: absolute; left: 50%; top: 50%;
+  width: 52px; height: 52px; border-radius: 50%;
+  background: rgba(226,232,240,.55);
+  transform: translate(-50%, -50%);
+}
+
+/* 技能按钮区（右下，扇形布局） */
+#action-panel {
+  position: absolute; right: calc(18px + env(safe-area-inset-right)); bottom: calc(18px + env(safe-area-inset-bottom));
+  width: 200px; height: 190px; pointer-events: auto;
+}
+#btn-attack {
+  position: absolute; right: 0; bottom: 0;
+  width: 84px; height: 84px; border-radius: 50%;
+  border: 3px solid #fbbf24; background: rgba(251,191,36,.22);
+  color: #fde68a; font-size: 16px; font-weight: 700; cursor: pointer;
+}
+#btn-attack:active { background: rgba(251,191,36,.5); }
+.skill-btn {
+  position: absolute; width: 56px; height: 56px; border-radius: 50%;
+  border: 2px solid #64748b; background: rgba(30,41,59,.85);
+  color: #e2e8f0; font-size: 11px; cursor: pointer; overflow: hidden;
+}
+.skill-btn b { position: relative; z-index: 2; font-size: 10px; }
+.skill-btn[data-skill="0"] { right: 104px; bottom: 6px; }
+.skill-btn[data-skill="1"] { right: 88px; bottom: 78px; }
+.skill-btn[data-skill="2"] { right: 18px; bottom: 102px; }
+#btn-recall { right: 152px; bottom: 60px; width: 44px; height: 44px; font-size: 10px; }
+.skill-btn .cd {
+  position: absolute; inset: 0; z-index: 1;
+  background: rgba(0,0,0,.72);
+  display: flex; align-items: center; justify-content: center;
+  color: #fff; font-size: 15px; font-weight: 700;
+  transform: scaleY(0); transform-origin: bottom;
+}
+.skill-btn.ready { border-color: #fbbf24; }
+.skill-btn.noMana { border-color: #2563eb; }
+
+#respawn-overlay {
+  position: absolute; left: 50%; top: 40%; transform: translate(-50%, -50%);
+  background: rgba(0,0,0,.75); color: #f87171;
+  padding: 14px 30px; border-radius: 12px; font-size: 18px;
+}
+
+/* 小屏适配 */
+@media (max-width: 640px) {
+  #status-panel { width: 36vw; }
+  .bar { height: 10px; }
+  #action-panel { transform: scale(.88); transform-origin: bottom right; }
+  .hero-card { width: 124px; }
+}
+/* 桌面端弱化摇杆提示 */
+@media (hover: hover) and (pointer: fine) {
+  #joystick-base { opacity: .25; }
+}
+
+</style>
+</head>
+<body>
+<canvas id="game"></canvas>
+
+<!-- 英雄选择界面 -->
+<div id="select-screen" class="screen">
+  <h1>王者竞技场</h1>
+  <p class="subtitle">网页版 MOBA · 手机 / 平板 / 电脑 三端通玩</p>
+  <div id="profile-bar"></div>
+  <h2>选择你的英雄</h2>
+  <div id="hero-list"></div>
+  <button id="btn-start" class="big-btn">开始对战</button>
+  <div class="sync-box">
+    <button id="btn-export" class="small-btn">导出同步码</button>
+    <button id="btn-import" class="small-btn">导入同步码</button>
+    <textarea id="sync-code" placeholder="同步码：导出后复制到其他设备导入，即可同步战绩"></textarea>
+  </div>
+  <p class="help-text">
+    电脑端：WASD 移动 · 空格/J 普攻 · K L U 技能 · B 回城<br>
+    手机/平板：左侧摇杆移动 · 右侧按钮攻击与技能
+  </p>
+</div>
+
+<!-- 对局结束界面 -->
+<div id="end-screen" class="screen hidden">
+  <h1 id="end-title">胜利</h1>
+  <div id="end-stats"></div>
+  <button id="btn-again" class="big-btn">再来一局</button>
+</div>
+
+<!-- 对局内 HUD -->
+<div id="hud" class="hidden">
+  <div id="top-bar">
+    <span id="score-blue" class="score blue">0</span>
+    <span id="game-timer">00:00</span>
+    <span id="score-red" class="score red">0</span>
+  </div>
+  <div id="kill-feed"></div>
+  <div id="status-panel">
+    <div class="bar-row"><div id="hp-bar" class="bar hp"><div></div></div></div>
+    <div class="bar-row"><div id="mp-bar" class="bar mp"><div></div></div></div>
+    <div id="hero-meta"></div>
+  </div>
+  <div id="joystick-zone">
+    <div id="joystick-base"><div id="joystick-knob"></div></div>
+  </div>
+  <div id="action-panel">
+    <button class="skill-btn" id="btn-recall" title="回城 (B)">回城</button>
+    <button class="skill-btn" data-skill="0"><span class="cd"></span><b></b></button>
+    <button class="skill-btn" data-skill="1"><span class="cd"></span><b></b></button>
+    <button class="skill-btn" data-skill="2"><span class="cd"></span><b></b></button>
+    <button id="btn-attack" title="普攻 (空格/J)">攻击</button>
+  </div>
+  <div id="respawn-overlay" class="hidden">已阵亡，<span id="respawn-count"></span> 秒后复活</div>
+</div>
+<script type="module">
+const safeStorage = (() => {
+  try {
+    const s = window.localStorage;
+    s.setItem('__t', '1'); s.removeItem('__t');
+    return s;
+  } catch {
+    const m = new Map();
+    return { getItem: k => (m.has(k) ? m.get(k) : null), setItem: (k, v) => m.set(k, String(v)) };
+  }
+})();
+
+// ===== js/core/constants.js =====
+// 全局常量（纯数据，浏览器 / Node 测试通用）
+const WORLD = { w: 2400, h: 1400 };
+const LANE_Y = 700;
+
+const TEAM = { BLUE: 0, RED: 1 };
+const TEAM_NAME = ['蓝方', '红方'];
+const TEAM_COLOR = ['#3b82f6', '#ef4444'];
+
+const FIRST_WAVE_DELAY = 5;       // 开局首波兵延迟（秒）
+const WAVE_INTERVAL = 25;         // 兵线间隔（秒）
+const MELEE_PER_WAVE = 3;
+const RANGED_PER_WAVE = 1;
+
+const MAX_LEVEL = 15;
+const RESPAWN_BASE = 5;           // 复活基础时间 + 等级 * 2
+const RECALL_TIME = 3;            // 回城读条（秒）
+
+const GOLD_PASSIVE = 5;           // 每秒被动金币
+const GOLD_MINION = 60;
+const GOLD_HERO_KILL = 300;
+const GOLD_TOWER = 150;
+const EXP_MINION = 60;
+const EXP_HERO_KILL = 200;
+const EXP_SHARE_RANGE = 700;      // 经验共享半径
+
+const EQUIP_GOLD_PER_TIER = 800;  // 每 800 金币自动升一阶装备
+const EQUIP_MAX_TIER = 6;
+const EQUIP_ATK_PER_TIER = 14;
+const EQUIP_DEF_PER_TIER = 9;
+const EQUIP_HP_PER_TIER = 160;
+
+// 防御塔 / 水晶
+const TOWER_HP = 3200;
+const TOWER_ATK = 190;
+const TOWER_DEF = 110;
+const TOWER_RANGE = 340;
+const CRYSTAL_HP = 5200;
+const CRYSTAL_DEF = 90;
+
+// 小兵
+const MINION_STATS = {
+  melee: { hp: 480, atk: 42, def: 20, range: 50, speed: 95, atkInterval: 1.1 },
+  ranged: { hp: 330, atk: 58, def: 10, range: 270, speed: 95, atkInterval: 1.4 }
+};
+const MINION_HP_GROWTH = 22;      // 每波小兵成长
+const MINION_AGGRO = 320;
+
+// 出生点与建筑布局（蓝方，红方按地图宽度镜像）
+const LAYOUT = {
+  crystalX: 170,
+  towerXs: [620, 1050],
+  spawnX: 260
+};
+
+// ===== js/core/utils.js =====
+// 通用数学工具（纯函数，便于单元测试）
+function clamp(v, min, max) {
+  return v < min ? min : v > max ? max : v;
+}
+
+function dist(ax, ay, bx, by) {
+  const dx = bx - ax, dy = by - ay;
+  return Math.hypot(dx, dy);
+}
+
+function lerp(a, b, t) {
+  return a + (b - a) * t;
+}
+
+// 返回单位向量 {x, y}；零向量返回 {x:0, y:0}
+function normalize(x, y) {
+  const len = Math.hypot(x, y);
+  if (len < 1e-9) return { x: 0, y: 0 };
+  return { x: x / len, y: y / len };
+}
+
+function angleTo(ax, ay, bx, by) {
+  return Math.atan2(by - ay, bx - ax);
+}
+
+// 简单可复现的伪随机数生成器（LCG），保证测试可确定
+function makeRng(seed = 42) {
+  let s = seed >>> 0;
+  return function rng() {
+    s = (s * 1664525 + 1013904223) >>> 0;
+    return s / 4294967296;
+  };
+}
+
+let _uid = 0;
+function uid() {
+  return ++_uid;
+}
+
+// ===== js/core/combat.js =====
+// 战斗数值计算（纯函数）
+
+
+// 护甲减伤公式：实际伤害 = 攻击 * 100 / (100 + 防御)，至少 1 点
+function physicalDamage(rawAtk, def) {
+  return Math.max(1, Math.round(rawAtk * 100 / (100 + Math.max(0, def))));
+}
+
+// 升到 level+1 级所需经验
+function expNeeded(level) {
+  return 100 + (level - 1) * 90;
+}
+
+// 装备阶数：金币每满 EQUIP_GOLD_PER_TIER 自动升一阶
+function equipTier(gold) {
+  return clamp(Math.floor(gold / EQUIP_GOLD_PER_TIER), 0, EQUIP_MAX_TIER);
+}
+
+function equipBonus(tier) {
+  return {
+    atk: tier * EQUIP_ATK_PER_TIER,
+    def: tier * EQUIP_DEF_PER_TIER,
+    hp: tier * EQUIP_HP_PER_TIER
+  };
+}
+
+// 根据英雄定义、等级与金币计算总属性
+function heroStats(def, level, gold) {
+  const lv = clamp(level, 1, MAX_LEVEL) - 1;
+  const eq = equipBonus(equipTier(gold));
+  const b = def.base;
+  return {
+    maxHp: b.hp + b.hpG * lv + eq.hp,
+    maxMp: b.mp + b.mpG * lv,
+    atk: b.atk + b.atkG * lv + eq.atk,
+    def: b.def + b.defG * lv + eq.def,
+    range: b.range,
+    speed: b.speed,
+    atkInterval: b.atkInterval
+  };
+}
+
+// 给英雄增加经验，处理连续升级；返回升级次数
+function gainExp(hero, amount) {
+  let ups = 0;
+  hero.exp += amount;
+  while (hero.level < MAX_LEVEL && hero.exp >= expNeeded(hero.level)) {
+    hero.exp -= expNeeded(hero.level);
+    hero.level += 1;
+    ups += 1;
+  }
+  if (hero.level >= MAX_LEVEL) hero.exp = Math.min(hero.exp, expNeeded(MAX_LEVEL) - 1);
+  return ups;
+}
+
+// ===== js/core/heroes.js =====
+// 英雄定义（全部为原创角色，数值为基础值 + 每级成长）
+// skill.type 决定 game.castSkill 中的效果分支
+const HERO_DEFS = [
+  {
+    id: 'jianhun',
+    name: '剑魂',
+    role: '战士',
+    desc: '近战突进型战士，擅长切入收割',
+    color: '#f59e0b',
+    base: { hp: 1450, hpG: 185, mp: 420, mpG: 40, atk: 112, atkG: 15, def: 62, defG: 8, range: 90, speed: 205, atkInterval: 1.0 },
+    skills: [
+      { key: 'dash', name: '破阵突斩', cd: 6, mana: 60, range: 320, desc: '向前突进并斩击路径终点的敌人' },
+      { key: 'spin', name: '剑气旋风', cd: 9, mana: 80, range: 170, desc: '以自身为中心旋转剑刃造成范围伤害' },
+      { key: 'execute', name: '裂地终结', cd: 28, mana: 140, range: 230, desc: '大范围重斩并回复自身生命' }
+    ]
+  },
+  {
+    id: 'xinglan',
+    name: '星澜',
+    role: '法师',
+    desc: '远程爆发法师，团战核心输出',
+    color: '#a78bfa',
+    base: { hp: 1080, hpG: 125, mp: 560, mpG: 60, atk: 132, atkG: 19, def: 42, defG: 5, range: 390, speed: 188, atkInterval: 1.05 },
+    skills: [
+      { key: 'bolt', name: '星辉弹', cd: 4.5, mana: 55, range: 480, desc: '射出星辉能量打击最近的敌人' },
+      { key: 'field', name: '减速星域', cd: 11, mana: 90, range: 420, desc: '在敌人脚下展开星域，伤害并减速' },
+      { key: 'meteor', name: '坠星术', cd: 30, mana: 160, range: 460, desc: '召唤巨大陨星轰炸目标区域' }
+    ]
+  },
+  {
+    id: 'fengyu',
+    name: '风羽',
+    role: '射手',
+    desc: '远程物理射手，持续输出与拆塔强势',
+    color: '#34d399',
+    base: { hp: 1180, hpG: 135, mp: 460, mpG: 45, atk: 122, atkG: 17, def: 46, defG: 6, range: 430, speed: 198, atkInterval: 0.78 },
+    skills: [
+      { key: 'pierce', name: '穿云箭', cd: 5, mana: 50, range: 540, desc: '射出强力穿透箭，重创最近的敌人' },
+      { key: 'haste', name: '风之疾行', cd: 12, mana: 70, range: 0, desc: '借助风力大幅提升移动速度' },
+      { key: 'volley', name: '万箭齐发', cd: 26, mana: 150, range: 500, desc: '箭雨覆盖目标区域内所有敌人' }
+    ]
+  }
+];
+
+function heroDefById(id) {
+  return HERO_DEFS.find(h => h.id === id) || null;
+}
+
+// ===== js/core/game.js =====
+// 游戏核心状态机：创建对局、每帧推进、技能释放、伤害与击杀结算。
+// 不依赖任何浏览器 API，可在 Node 中直接模拟整局游戏（用于自动化测试）。
+
+
+
+
+// x 坐标镜像：蓝方用原值，红方用地图宽度减原值
+function mirrorX(x, team) {
+  return team === TEAM.BLUE ? x : WORLD.w - x;
+}
+
+function basePos(team) {
+  return { x: mirrorX(LAYOUT.spawnX, team), y: LANE_Y };
+}
+
+function freshInput() {
+  return { mx: 0, my: 0, attack: false, skill: -1, recall: false };
+}
+
+function createHero(defId, team, isPlayer, slot = 0) {
+  const def = heroDefById(defId);
+  const stats = heroStats(def, 1, 0);
+  const pos = basePos(team);
+  return {
+    id: uid(), kind: 'hero', def, heroId: defId, name: def.name,
+    team, isPlayer, slot,
+    x: pos.x, y: pos.y + (slot - 1) * 90,
+    homeY: pos.y + (slot - 1) * 90,
+    facing: team === TEAM.BLUE ? 0 : Math.PI,
+    level: 1, exp: 0, gold: 0,
+    hp: stats.maxHp, maxHp: stats.maxHp,
+    mp: stats.maxMp, maxMp: stats.maxMp,
+    atk: stats.atk, def_: stats.def, range: stats.range,
+    baseSpeed: stats.speed, atkInterval: stats.atkInterval, atkTimer: 0,
+    skills: def.skills.map(s => ({ def: s, cd: 0 })),
+    buffs: [],
+    dead: false, respawnTimer: 0, recallTimer: -1,
+    kills: 0, deaths: 0,
+    input: freshInput()
+  };
+}
+
+function createTower(team, x) {
+  return {
+    id: uid(), kind: 'tower', team, x: mirrorX(x, team), y: LANE_Y,
+    hp: TOWER_HP, maxHp: TOWER_HP, atk: TOWER_ATK, def_: TOWER_DEF,
+    range: TOWER_RANGE, atkInterval: 1.0, atkTimer: 0
+  };
+}
+
+function createCrystal(team) {
+  return {
+    id: uid(), kind: 'crystal', team, x: mirrorX(LAYOUT.crystalX, team), y: LANE_Y,
+    hp: CRYSTAL_HP, maxHp: CRYSTAL_HP, def_: CRYSTAL_DEF
+  };
+}
+
+function createMinion(team, type, wave, offsetIdx, rng) {
+  const s = MINION_STATS[type];
+  const pos = basePos(team);
+  const jitter = (rng() - 0.5) * 120;
+  return {
+    id: uid(), kind: 'minion', team, type,
+    x: pos.x + (team === TEAM.BLUE ? 60 : -60) - offsetIdx * (team === TEAM.BLUE ? 35 : -35),
+    y: LANE_Y + jitter,
+    hp: s.hp + wave * MINION_HP_GROWTH, maxHp: s.hp + wave * MINION_HP_GROWTH,
+    atk: s.atk, def_: s.def, range: s.range, speed: s.speed,
+    atkInterval: s.atkInterval, atkTimer: 0
+  };
+}
+
+// playerHeroId: 玩家选择的英雄；双方各 3 名英雄（玩家 + 2 个 AI 队友 vs 3 个 AI）
+function createGame(playerHeroId = 'jianhun', seed = 42) {
+  const rng = makeRng(seed);
+  const ids = HERO_DEFS.map(h => h.id);
+  const allyIds = [playerHeroId, ...ids.filter(i => i !== playerHeroId)].slice(0, 3);
+  const enemyIds = [...ids];
+
+  const heroes = [];
+  allyIds.forEach((hid, i) => heroes.push(createHero(hid, TEAM.BLUE, i === 0, i)));
+  enemyIds.forEach((hid, i) => heroes.push(createHero(hid, TEAM.RED, false, i)));
+
+  return {
+    time: 0, state: 'playing', winner: -1,
+    rng, wave: 0, waveTimer: FIRST_WAVE_DELAY,
+    heroes,
+    minions: [],
+    towers: [createTower(TEAM.BLUE, LAYOUT.towerXs[0]), createTower(TEAM.BLUE, LAYOUT.towerXs[1]),
+              createTower(TEAM.RED, LAYOUT.towerXs[0]), createTower(TEAM.RED, LAYOUT.towerXs[1])],
+    crystals: [createCrystal(TEAM.BLUE), createCrystal(TEAM.RED)],
+    effects: [],   // 渲染特效 {type,x,y,r,ttl,maxTtl,color}
+    killFeed: []   // 击杀播报 {text,ttl}
+  };
+}
+
+function playerHero(game) {
+  return game.heroes.find(h => h.isPlayer);
+}
+
+// ---------- 查询 ----------
+function aliveEnemies(game, team) {
+  const out = [];
+  for (const h of game.heroes) if (h.team !== team && !h.dead) out.push(h);
+  for (const m of game.minions) if (m.team !== team && m.hp > 0) out.push(m);
+  for (const t of game.towers) if (t.team !== team && t.hp > 0) out.push(t);
+  for (const c of game.crystals) if (c.team !== team && c.hp > 0) out.push(c);
+  return out;
+}
+
+function nearestEnemy(game, ent, range, filter = null) {
+  let best = null, bestD = range;
+  for (const e of aliveEnemies(game, ent.team)) {
+    if (filter && !filter(e)) continue;
+    const d = dist(ent.x, ent.y, e.x, e.y);
+    if (d <= bestD) { bestD = d; best = e; }
+  }
+  return best;
+}
+
+function moveSpeed(hero) {
+  let mult = 1;
+  for (const b of hero.buffs) {
+    if (b.type === 'haste') mult += b.value;
+    if (b.type === 'slow') mult -= b.value;
+  }
+  return Math.max(40, hero.baseSpeed * mult);
+}
+
+function addBuff(hero, type, value, duration) {
+  const exist = hero.buffs.find(b => b.type === type);
+  if (exist) { exist.value = value; exist.t = duration; }
+  else hero.buffs.push({ type, value, t: duration });
+}
+
+function addEffect(game, type, x, y, r, ttl, color) {
+  game.effects.push({ type, x, y, r, ttl, maxTtl: ttl, color });
+}
+
+function announce(game, text) {
+  game.killFeed.push({ text, ttl: 5 });
+  if (game.killFeed.length > 4) game.killFeed.shift();
+}
+
+// ---------- 伤害与击杀结算 ----------
+function damageEntity(game, target, rawAtk, source) {
+  if (target.hp <= 0 || (target.kind === 'hero' && target.dead)) return 0;
+  const dmg = physicalDamage(rawAtk, target.def_ ?? 0);
+  target.hp -= dmg;
+  if (target.kind === 'hero') target.recallTimer = -1; // 受击打断回城
+  addEffect(game, 'hit', target.x, target.y, 18, 0.25, '#fff');
+  if (target.hp <= 0) onKill(game, target, source);
+  return dmg;
+}
+
+function rewardTeamExp(game, team, x, y, amount) {
+  const near = game.heroes.filter(h => h.team === team && !h.dead &&
+    dist(h.x, h.y, x, y) <= EXP_SHARE_RANGE);
+  for (const h of near) {
+    if (gainExp(h, Math.round(amount / Math.max(1, near.length))) > 0) applyLevelStats(h);
+  }
+}
+
+function applyLevelStats(hero) {
+  const s = heroStats(hero.def, hero.level, hero.gold);
+  const hpRatio = hero.maxHp > 0 ? hero.hp / hero.maxHp : 1;
+  const mpRatio = hero.maxMp > 0 ? hero.mp / hero.maxMp : 1;
+  hero.maxHp = s.maxHp; hero.maxMp = s.maxMp;
+  hero.atk = s.atk; hero.def_ = s.def;
+  // 升级 / 出装时按比例保留当前血蓝
+  hero.hp = Math.min(hero.maxHp, Math.max(hero.hp, hero.maxHp * hpRatio));
+  hero.mp = Math.min(hero.maxMp, hero.maxMp * mpRatio);
+}
+
+function addGold(hero, amount) {
+  hero.gold += amount;
+  applyLevelStats(hero);
+}
+
+function onKill(game, target, source) {
+  target.hp = 0;
+  const killerHero = source && source.kind === 'hero' ? source : null;
+  if (target.kind === 'minion') {
+    if (killerHero) addGold(killerHero, GOLD_MINION);
+    rewardTeamExp(game, 1 - target.team, target.x, target.y, EXP_MINION);
+  } else if (target.kind === 'hero') {
+    target.dead = true;
+    target.deaths += 1;
+    target.respawnTimer = RESPAWN_BASE + target.level * 2;
+    target.buffs = [];
+    if (killerHero) {
+      killerHero.kills += 1;
+      addGold(killerHero, GOLD_HERO_KILL);
+      announce(game, `${killerHero.name} 击杀了 ${target.name}！`);
+    } else {
+      announce(game, `${target.name} 阵亡了`);
+    }
+    rewardTeamExp(game, 1 - target.team, target.x, target.y, EXP_HERO_KILL);
+    addEffect(game, 'aoe', target.x, target.y, 60, 0.6, '#f87171');
+  } else if (target.kind === 'tower') {
+    for (const h of game.heroes) if (h.team !== target.team) addGold(h, GOLD_TOWER);
+    announce(game, `${target.team === TEAM.BLUE ? '蓝方' : '红方'}防御塔被摧毁！`);
+    addEffect(game, 'aoe', target.x, target.y, 120, 1, '#fbbf24');
+  } else if (target.kind === 'crystal') {
+    game.state = 'ended';
+    game.winner = 1 - target.team;
+    addEffect(game, 'aoe', target.x, target.y, 200, 2, '#fbbf24');
+  }
+}
+
+// ---------- 技能 ----------
+function canCast(hero, idx) {
+  const sk = hero.skills[idx];
+  return !!sk && sk.cd <= 0 && hero.mp >= sk.def.mana && !hero.dead;
+}
+
+// 释放技能；成功返回 true。所有技能效果在此集中实现。
+function castSkill(game, hero, idx) {
+  if (!canCast(hero, idx)) return false;
+  const sk = hero.skills[idx];
+  const key = sk.def.key;
+  const color = hero.def.color;
+
+  // 自我增益类技能不需要目标
+  if (key === 'haste') {
+    addBuff(hero, 'haste', 0.6, 3);
+    addEffect(game, 'ring', hero.x, hero.y, 70, 0.5, color);
+  } else if (key === 'spin') {
+    const hit = aliveEnemies(game, hero.team)
+      .filter(e => dist(hero.x, hero.y, e.x, e.y) <= sk.def.range);
+    if (!hit.length) return false;
+    for (const e of hit) damageEntity(game, e, hero.atk * 0.85 + 45, hero);
+    addEffect(game, 'ring', hero.x, hero.y, sk.def.range, 0.4, color);
+  } else if (key === 'dash') {
+    const target = nearestEnemy(game, hero, sk.def.range);
+    if (!target) return false;
+    const dir = normalize(target.x - hero.x, target.y - hero.y);
+    hero.x = clamp(hero.x + dir.x * 240, 30, WORLD.w - 30);
+    hero.y = clamp(hero.y + dir.y * 240, 30, WORLD.h - 30);
+    damageEntity(game, target, hero.atk * 1.3 + 60, hero);
+    addEffect(game, 'slash', target.x, target.y, 70, 0.35, color);
+  } else if (key === 'execute') {
+    const hit = aliveEnemies(game, hero.team)
+      .filter(e => dist(hero.x, hero.y, e.x, e.y) <= sk.def.range);
+    if (!hit.length) return false;
+    for (const e of hit) damageEntity(game, e, hero.atk * 2.0 + 150, hero);
+    hero.hp = Math.min(hero.maxHp, hero.hp + hero.maxHp * 0.25);
+    addEffect(game, 'ring', hero.x, hero.y, sk.def.range, 0.6, color);
+  } else if (key === 'bolt' || key === 'pierce') {
+    const target = nearestEnemy(game, hero, sk.def.range);
+    if (!target) return false;
+    const mult = key === 'bolt' ? 1.5 : 1.8;
+    damageEntity(game, target, hero.atk * mult + 55, hero);
+    addEffect(game, 'beam', hero.x, hero.y, 0, 0.3, color);
+    game.effects[game.effects.length - 1].tx = target.x;
+    game.effects[game.effects.length - 1].ty = target.y;
+  } else if (key === 'field') {
+    const target = nearestEnemy(game, hero, sk.def.range);
+    if (!target) return false;
+    const hit = aliveEnemies(game, hero.team)
+      .filter(e => dist(target.x, target.y, e.x, e.y) <= 200);
+    for (const e of hit) {
+      damageEntity(game, e, hero.atk * 1.0 + 60, hero);
+      if (e.kind === 'hero') addBuff(e, 'slow', 0.4, 2);
+    }
+    addEffect(game, 'aoe', target.x, target.y, 200, 0.7, color);
+  } else if (key === 'meteor' || key === 'volley') {
+    const target = nearestEnemy(game, hero, sk.def.range);
+    if (!target) return false;
+    const radius = key === 'meteor' ? 260 : 240;
+    const mult = key === 'meteor' ? 2.2 : 1.6;
+    const bonus = key === 'meteor' ? 200 : 120;
+    const hit = aliveEnemies(game, hero.team)
+      .filter(e => dist(target.x, target.y, e.x, e.y) <= radius);
+    for (const e of hit) damageEntity(game, e, hero.atk * mult + bonus, hero);
+    addEffect(game, 'aoe', target.x, target.y, radius, 0.8, color);
+  } else {
+    return false;
+  }
+
+  sk.cd = sk.def.cd;
+  hero.mp -= sk.def.mana;
+  hero.recallTimer = -1;
+  return true;
+}
+
+// ---------- 兵线 ----------
+function spawnWave(game) {
+  game.wave += 1;
+  for (const team of [TEAM.BLUE, TEAM.RED]) {
+    for (let i = 0; i < MELEE_PER_WAVE; i++) {
+      game.minions.push(createMinion(team, 'melee', game.wave, i, game.rng));
+    }
+    for (let i = 0; i < RANGED_PER_WAVE; i++) {
+      game.minions.push(createMinion(team, 'ranged', game.wave, MELEE_PER_WAVE + i, game.rng));
+    }
+  }
+}
+
+// ---------- 单位行为 ----------
+function tickHero(game, h, dt) {
+  if (h.dead) {
+    h.respawnTimer -= dt;
+    if (h.respawnTimer <= 0) {
+      h.dead = false;
+      const pos = basePos(h.team);
+      h.x = pos.x; h.y = h.homeY;
+      h.hp = h.maxHp; h.mp = h.maxMp;
+      h.input = freshInput();
+    }
+    return;
+  }
+
+  // 冷却 / 增益衰减
+  for (const sk of h.skills) sk.cd = Math.max(0, sk.cd - dt);
+  h.buffs = h.buffs.filter(b => (b.t -= dt) > 0);
+  h.atkTimer = Math.max(0, h.atkTimer - dt);
+
+  // 回血回蓝（泉水内大幅强化）
+  const base = basePos(h.team);
+  const atBase = dist(h.x, h.y, base.x, base.y) < 260;
+  h.hp = Math.min(h.maxHp, h.hp + h.maxHp * (atBase ? 0.08 : 0.005) * dt);
+  h.mp = Math.min(h.maxMp, h.mp + (atBase ? 60 : 7) * dt);
+
+  // 被动金币
+  h.goldAcc = (h.goldAcc || 0) + GOLD_PASSIVE * dt;
+  if (h.goldAcc >= 1) {
+    const g = Math.floor(h.goldAcc);
+    h.goldAcc -= g;
+    addGold(h, g);
+  }
+
+  const inp = h.input;
+
+  // 回城
+  if (inp.recall && h.recallTimer < 0) h.recallTimer = RECALL_TIME;
+  if (h.recallTimer >= 0) {
+    if (inp.mx !== 0 || inp.my !== 0) {
+      h.recallTimer = -1; // 移动打断回城
+    } else {
+      h.recallTimer -= dt;
+      if (h.recallTimer <= 0) {
+        h.x = base.x; h.y = h.homeY;
+        h.recallTimer = -1;
+      }
+      inp.recall = false;
+      return; // 读条期间不做其他动作
+    }
+  }
+  inp.recall = false;
+
+  // 移动
+  if (inp.mx !== 0 || inp.my !== 0) {
+    const dir = normalize(inp.mx, inp.my);
+    const sp = moveSpeed(h);
+    h.x = clamp(h.x + dir.x * sp * dt, 30, WORLD.w - 30);
+    h.y = clamp(h.y + dir.y * sp * dt, 30, WORLD.h - 30);
+    h.facing = Math.atan2(dir.y, dir.x);
+  }
+
+  // 技能
+  if (inp.skill >= 0) {
+    castSkill(game, h, inp.skill);
+    inp.skill = -1;
+  }
+
+  // 普攻（自动索敌：范围内最近的敌人）
+  if (inp.attack && h.atkTimer <= 0) {
+    const target = nearestEnemy(game, h, h.range + 25);
+    if (target) {
+      damageEntity(game, target, h.atk, h);
+      h.atkTimer = h.atkInterval;
+      h.facing = Math.atan2(target.y - h.y, target.x - h.x);
+      addEffect(game, 'beam', h.x, h.y, 0, 0.15, '#e5e7eb');
+      game.effects[game.effects.length - 1].tx = target.x;
+      game.effects[game.effects.length - 1].ty = target.y;
+    }
+  }
+}
+
+function tickMinion(game, m, dt) {
+  m.atkTimer = Math.max(0, m.atkTimer - dt);
+  const target = nearestEnemy(game, m, MINION_AGGRO);
+  if (target) {
+    const d = dist(m.x, m.y, target.x, target.y);
+    if (d <= m.range + 20) {
+      if (m.atkTimer <= 0) {
+        damageEntity(game, target, m.atk, m);
+        m.atkTimer = m.atkInterval;
+      }
+      return;
+    }
+    const dir = normalize(target.x - m.x, target.y - m.y);
+    m.x += dir.x * m.speed * dt;
+    m.y += dir.y * m.speed * dt;
+    return;
+  }
+  // 无目标：沿兵线推进
+  const dirX = m.team === TEAM.BLUE ? 1 : -1;
+  m.x += dirX * m.speed * dt;
+  m.y += (LANE_Y - m.y) * 0.5 * dt;
+}
+
+function tickTower(game, t, dt) {
+  t.atkTimer = Math.max(0, t.atkTimer - dt);
+  if (t.atkTimer > 0) return;
+  // 优先攻击小兵，其次英雄
+  const target = nearestEnemy(game, t, t.range, e => e.kind === 'minion')
+    || nearestEnemy(game, t, t.range, e => e.kind === 'hero');
+  if (target) {
+    damageEntity(game, target, t.atk, t);
+    t.atkTimer = t.atkInterval;
+    addEffect(game, 'beam', t.x, t.y - 40, 0, 0.2, '#fbbf24');
+    game.effects[game.effects.length - 1].tx = target.x;
+    game.effects[game.effects.length - 1].ty = target.y;
+  }
+}
+
+// ---------- 主循环 ----------
+function tick(game, dt) {
+  if (game.state !== 'playing') return;
+  game.time += dt;
+
+  game.waveTimer -= dt;
+  if (game.waveTimer <= 0) {
+    spawnWave(game);
+    game.waveTimer = WAVE_INTERVAL;
+  }
+
+  for (const h of game.heroes) {
+    tickHero(game, h, dt);
+    if (game.state !== 'playing') break;
+  }
+  if (game.state === 'playing') {
+    for (const m of game.minions) {
+      if (m.hp > 0) tickMinion(game, m, dt);
+      if (game.state !== 'playing') break;
+    }
+  }
+  if (game.state === 'playing') {
+    for (const t of game.towers) {
+      if (t.hp > 0) tickTower(game, t, dt);
+      if (game.state !== 'playing') break;
+    }
+  }
+
+  game.minions = game.minions.filter(m => m.hp > 0);
+  for (const e of game.effects) e.ttl -= dt;
+  game.effects = game.effects.filter(e => e.ttl > 0);
+  for (const k of game.killFeed) k.ttl -= dt;
+  game.killFeed = game.killFeed.filter(k => k.ttl > 0);
+}
+
+// ===== js/core/ai.js =====
+// 机器人英雄 AI：每帧为非玩家英雄填写 input（与玩家走完全相同的处理管线）。
+// 行为：低血量撤退回泉水 → 满状态再战；否则追击射程内目标并释放技能；无目标时沿兵线推进。
+
+
+
+const AGGRO_RANGE = 560;
+const RETREAT_HP = 0.28;   // 低于 28% 血量撤退
+const RESUME_HP = 0.85;    // 恢复到 85% 以上重新出击
+
+function botThink(game, hero) {
+  const inp = hero.input;
+  inp.mx = 0; inp.my = 0; inp.attack = false; inp.skill = -1; inp.recall = false;
+  if (hero.dead) return;
+
+  const base = basePos(hero.team);
+  const hpRatio = hero.hp / hero.maxHp;
+
+  // 撤退状态机
+  if (hero.aiRetreating && hpRatio >= RESUME_HP) hero.aiRetreating = false;
+  if (hpRatio < RETREAT_HP) hero.aiRetreating = true;
+
+  if (hero.aiRetreating) {
+    const d = dist(hero.x, hero.y, base.x, base.y);
+    if (d > 120) {
+      const dir = normalize(base.x - hero.x, base.y - hero.y);
+      inp.mx = dir.x; inp.my = dir.y;
+    }
+    return;
+  }
+
+  // 索敌：优先残血敌方英雄，其次最近的任意敌人
+  const lowHero = nearestEnemy(game, hero, AGGRO_RANGE,
+    e => e.kind === 'hero' && e.hp / e.maxHp < 0.35);
+  const target = lowHero || nearestEnemy(game, hero, AGGRO_RANGE);
+
+  if (target) {
+    const d = dist(hero.x, hero.y, target.x, target.y);
+    // 技能：从大招往普通技能依次尝试（目标在射程内时）
+    for (let i = hero.skills.length - 1; i >= 0; i--) {
+      const sk = hero.skills[i];
+      const rangeOk = sk.def.range === 0 || d <= sk.def.range;
+      if (canCast(hero, i) && rangeOk) { inp.skill = i; break; }
+    }
+    if (d <= hero.range + 15) {
+      inp.attack = true;
+      // 远程英雄保持距离微调（风筝）
+      if (hero.range > 200 && d < hero.range * 0.5) {
+        const away = normalize(hero.x - target.x, hero.y - target.y);
+        inp.mx = away.x * 0.6; inp.my = away.y * 0.6;
+      }
+    } else {
+      const dir = normalize(target.x - hero.x, target.y - hero.y);
+      inp.mx = dir.x; inp.my = dir.y;
+      inp.attack = true; // 接近过程中进入射程即自动出手
+    }
+    return;
+  }
+
+  // 无目标：朝敌方水晶方向推进，回到兵线高度
+  const enemyBase = basePos(1 - hero.team);
+  const dir = normalize(enemyBase.x - hero.x, enemyBase.y - hero.y);
+  inp.mx = dir.x; inp.my = dir.y;
+}
+
+// 为所有机器人填写输入（在 game.tick 之前调用）
+function runBots(game) {
+  for (const h of game.heroes) {
+    if (!h.isPlayer) botThink(game, h);
+  }
+}
+
+// ===== js/core/save.js =====
+// 玩家档案存取与三端同步。
+// 档案保存在 localStorage（每台设备本地持久化），并支持导出 / 导入同步码：
+// 把同步码复制到另一台设备（手机 / 平板 / 电脑）导入，即可同步战绩与设置。
+const SAVE_KEY = 'honor-arena-profile-v1';
+
+function defaultProfile() {
+  return {
+    v: 1,
+    name: '召唤师',
+    wins: 0,
+    losses: 0,
+    totalKills: 0,
+    totalDeaths: 0,
+    favoriteHero: 'jianhun',
+    updatedAt: 0
+  };
+}
+
+// storage 参数允许在 Node 测试中注入内存实现
+function loadProfile(storage) {
+  try {
+    const raw = storage.getItem(SAVE_KEY);
+    if (!raw) return defaultProfile();
+    const data = JSON.parse(raw);
+    if (!data || data.v !== 1) return defaultProfile();
+    return { ...defaultProfile(), ...data };
+  } catch {
+    return defaultProfile();
+  }
+}
+
+function saveProfile(storage, profile) {
+  profile.updatedAt = Date.now();
+  storage.setItem(SAVE_KEY, JSON.stringify(profile));
+}
+
+// 对局结束后记录战绩
+function recordMatch(profile, { won, kills, deaths, heroId }) {
+  if (won) profile.wins += 1; else profile.losses += 1;
+  profile.totalKills += kills;
+  profile.totalDeaths += deaths;
+  profile.favoriteHero = heroId;
+  return profile;
+}
+
+// ---- 同步码（base64 编码的 JSON，跨设备粘贴即可同步） ----
+function toB64(str) {
+  if (typeof btoa === 'function') return btoa(unescape(encodeURIComponent(str)));
+  return Buffer.from(str, 'utf8').toString('base64');
+}
+
+function fromB64(b64) {
+  if (typeof atob === 'function') return decodeURIComponent(escape(atob(b64)));
+  return Buffer.from(b64, 'base64').toString('utf8');
+}
+
+function exportCode(profile) {
+  return toB64(JSON.stringify(profile));
+}
+
+// 非法同步码返回 null
+function importCode(code) {
+  try {
+    const data = JSON.parse(fromB64(code.trim()));
+    if (!data || data.v !== 1 || typeof data.wins !== 'number') return null;
+    return { ...defaultProfile(), ...data };
+  } catch {
+    return null;
+  }
+}
+
+// 冲突合并：取两份档案中“更新时间更晚”者，战绩字段取较大值，保证不丢进度
+function mergeProfiles(a, b) {
+  const newer = (a.updatedAt || 0) >= (b.updatedAt || 0) ? a : b;
+  return {
+    ...newer,
+    wins: Math.max(a.wins, b.wins),
+    losses: Math.max(a.losses, b.losses),
+    totalKills: Math.max(a.totalKills, b.totalKills),
+    totalDeaths: Math.max(a.totalDeaths, b.totalDeaths)
+  };
+}
+
+// ===== js/ui/input.js =====
+// 三端统一输入层：
+//  - 电脑：WASD/方向键移动，空格或 J 普攻，K/L/U 技能 1/2/3，B 回城
+//  - 手机/平板：左半屏虚拟摇杆移动，右下按钮普攻 / 技能 / 回城
+// 输出统一写入 state，由 main.js 每帧拷贝到玩家英雄的 input。
+function createInput() {
+  const state = {
+    mx: 0, my: 0,          // 摇杆 / 键盘合成的移动方向
+    attackHeld: false,     // 攻击键按住
+    attackPulse: 0,        // 点按攻击的短暂保持（秒）
+    skillQueue: [],        // 待释放技能序号
+    recall: false
+  };
+
+  const keys = new Set();
+  const KEY_SKILL = { KeyK: 0, KeyL: 1, KeyU: 2 };
+
+  function syncKeyboardMove() {
+    let x = 0, y = 0;
+    if (keys.has('KeyA') || keys.has('ArrowLeft')) x -= 1;
+    if (keys.has('KeyD') || keys.has('ArrowRight')) x += 1;
+    if (keys.has('KeyW') || keys.has('ArrowUp')) y -= 1;
+    if (keys.has('KeyS') || keys.has('ArrowDown')) y += 1;
+    // 摇杆优先：仅当摇杆未激活时键盘生效
+    if (!joyActive) { state.mx = x; state.my = y; }
+  }
+
+  window.addEventListener('keydown', e => {
+    if (e.repeat) return;
+    keys.add(e.code);
+    if (e.code === 'Space' || e.code === 'KeyJ') { state.attackHeld = true; e.preventDefault(); }
+    if (e.code in KEY_SKILL) state.skillQueue.push(KEY_SKILL[e.code]);
+    if (e.code === 'KeyB') state.recall = true;
+    syncKeyboardMove();
+  });
+  window.addEventListener('keyup', e => {
+    keys.delete(e.code);
+    if (e.code === 'Space' || e.code === 'KeyJ') state.attackHeld = false;
+    syncKeyboardMove();
+  });
+
+  // ---------- 虚拟摇杆 ----------
+  const zone = document.getElementById('joystick-zone');
+  const baseEl = document.getElementById('joystick-base');
+  const knobEl = document.getElementById('joystick-knob');
+  let joyActive = false, joyId = -1, cx = 0, cy = 0;
+  const RADIUS = 52;
+
+  function joyStart(e) {
+    const t = e.changedTouches ? e.changedTouches[0] : e;
+    joyActive = true;
+    joyId = t.identifier ?? -1;
+    const r = baseEl.getBoundingClientRect();
+    cx = r.left + r.width / 2; cy = r.top + r.height / 2;
+    baseEl.classList.add('active');
+    joyMove(e);
+  }
+  function joyMove(e) {
+    if (!joyActive) return;
+    const touches = e.changedTouches ? [...e.changedTouches] : [e];
+    const t = touches.find(t => (t.identifier ?? -1) === joyId);
+    if (!t) return;
+    let dx = t.clientX - cx, dy = t.clientY - cy;
+    const len = Math.hypot(dx, dy);
+    if (len > RADIUS) { dx = dx / len * RADIUS; dy = dy / len * RADIUS; }
+    knobEl.style.transform = `translate(calc(-50% + ${dx}px), calc(-50% + ${dy}px))`;
+    const dead = 8;
+    state.mx = len > dead ? dx / RADIUS : 0;
+    state.my = len > dead ? dy / RADIUS : 0;
+    e.preventDefault();
+  }
+  function joyEnd(e) {
+    if (!joyActive) return;
+    const touches = e.changedTouches ? [...e.changedTouches] : [e];
+    if (!touches.some(t => (t.identifier ?? -1) === joyId)) return;
+    joyActive = false; joyId = -1;
+    state.mx = 0; state.my = 0;
+    knobEl.style.transform = 'translate(-50%, -50%)';
+    baseEl.classList.remove('active');
+    syncKeyboardMove();
+  }
+
+  zone.addEventListener('touchstart', joyStart, { passive: false });
+  zone.addEventListener('touchmove', joyMove, { passive: false });
+  zone.addEventListener('touchend', joyEnd);
+  zone.addEventListener('touchcancel', joyEnd);
+  // 鼠标也可拖摇杆（桌面调试）
+  zone.addEventListener('mousedown', joyStart);
+  window.addEventListener('mousemove', joyMove);
+  window.addEventListener('mouseup', joyEnd);
+
+  // ---------- 按钮 ----------
+  const bindPress = (el, down, up) => {
+    el.addEventListener('touchstart', e => { e.preventDefault(); down(); }, { passive: false });
+    el.addEventListener('touchend', e => { e.preventDefault(); up && up(); }, { passive: false });
+    el.addEventListener('mousedown', down);
+    el.addEventListener('mouseup', () => up && up());
+    el.addEventListener('mouseleave', () => up && up());
+  };
+
+  bindPress(document.getElementById('btn-attack'),
+    () => { state.attackHeld = true; state.attackPulse = 0.3; },
+    () => { state.attackHeld = false; });
+  for (const btn of document.querySelectorAll('.skill-btn[data-skill]')) {
+    bindPress(btn, () => state.skillQueue.push(Number(btn.dataset.skill)));
+  }
+  bindPress(document.getElementById('btn-recall'), () => { state.recall = true; });
+
+  return state;
+}
+
+// 把输入状态写入玩家英雄（每帧调用一次）
+function applyInput(state, hero, dt) {
+  hero.input.mx = state.mx;
+  hero.input.my = state.my;
+  state.attackPulse = Math.max(0, state.attackPulse - dt);
+  hero.input.attack = state.attackHeld || state.attackPulse > 0;
+  hero.input.skill = state.skillQueue.length ? state.skillQueue.shift() : -1;
+  if (state.recall) { hero.input.recall = true; state.recall = false; }
+}
+
+// ===== js/ui/renderer.js =====
+// Canvas 渲染器：地形预渲染 + 摄像机跟随 + 实体/特效/小地图绘制。
+// 所有美术素材均为程序化绘制的原创内容，无外部资源依赖。
+
+
+
+const VIEW_W = 1150; // 摄像机取景宽度（世界坐标），按屏幕等比缩放
+
+function createRenderer(canvas) {
+  const ctx = canvas.getContext('2d');
+  let dpr = 1;
+
+  function resize() {
+    dpr = Math.min(window.devicePixelRatio || 1, 2);
+    canvas.width = Math.floor(innerWidth * dpr);
+    canvas.height = Math.floor(innerHeight * dpr);
+  }
+  window.addEventListener('resize', resize);
+  resize();
+
+  const terrain = buildTerrain();
+
+  function render(game) {
+    const me = playerHero(game);
+    const scale = canvas.width / VIEW_W;
+    const viewH = canvas.height / scale;
+    const camX = clamp(me.x - VIEW_W / 2, 0, WORLD.w - VIEW_W);
+    const camY = clamp(me.y - viewH / 2, 0, Math.max(0, WORLD.h - viewH));
+
+    ctx.setTransform(scale, 0, 0, scale, -camX * scale, -camY * scale);
+    ctx.clearRect(camX, camY, VIEW_W, viewH);
+    ctx.drawImage(terrain, 0, 0);
+
+    drawBuildings(ctx, game);
+    for (const m of game.minions) drawMinion(ctx, m);
+    for (const h of game.heroes) if (!h.dead) drawHero(ctx, h, game.time);
+    for (const e of game.effects) drawEffect(ctx, e);
+
+    ctx.setTransform(1, 0, 0, 1, 0, 0);
+    drawMinimap(ctx, game, canvas);
+  }
+
+  return { render, resize };
+}
+
+// ---------- 地形（仅生成一次） ----------
+function buildTerrain() {
+  const c = document.createElement('canvas');
+  c.width = WORLD.w; c.height = WORLD.h;
+  const g = c.getContext('2d');
+
+  // 草地底色
+  const bg = g.createLinearGradient(0, 0, 0, WORLD.h);
+  bg.addColorStop(0, '#14331f');
+  bg.addColorStop(1, '#0d2417');
+  g.fillStyle = bg;
+  g.fillRect(0, 0, WORLD.w, WORLD.h);
+
+  // 草丛装饰（固定随机种子保证两次生成一致）
+  let s = 7;
+  const rnd = () => (s = (s * 16807) % 2147483647) / 2147483647;
+  g.fillStyle = 'rgba(34,84,52,.55)';
+  for (let i = 0; i < 90; i++) {
+    const x = rnd() * WORLD.w, y = rnd() * WORLD.h;
+    if (Math.abs(y - LANE_Y) < 160) continue;
+    g.beginPath();
+    g.ellipse(x, y, 30 + rnd() * 50, 18 + rnd() * 26, rnd() * Math.PI, 0, Math.PI * 2);
+    g.fill();
+  }
+
+  // 中央河道
+  g.fillStyle = 'rgba(37,99,168,.35)';
+  g.beginPath();
+  g.ellipse(WORLD.w / 2, LANE_Y, 130, 480, 0, 0, Math.PI * 2);
+  g.fill();
+
+  // 兵线道路
+  g.fillStyle = 'rgba(120,113,90,.4)';
+  g.fillRect(0, LANE_Y - 90, WORLD.w, 180);
+  g.strokeStyle = 'rgba(229,231,235,.18)';
+  g.setLineDash([26, 22]);
+  g.lineWidth = 4;
+  g.beginPath();
+  g.moveTo(0, LANE_Y); g.lineTo(WORLD.w, LANE_Y);
+  g.stroke();
+  g.setLineDash([]);
+
+  // 双方泉水区域
+  for (const team of [0, 1]) {
+    const x = team === 0 ? 260 : WORLD.w - 260;
+    const grad = g.createRadialGradient(x, LANE_Y, 30, x, LANE_Y, 260);
+    grad.addColorStop(0, team === 0 ? 'rgba(59,130,246,.35)' : 'rgba(239,68,68,.35)');
+    grad.addColorStop(1, 'rgba(0,0,0,0)');
+    g.fillStyle = grad;
+    g.beginPath(); g.arc(x, LANE_Y, 260, 0, Math.PI * 2); g.fill();
+  }
+
+  // 边界
+  g.strokeStyle = 'rgba(251,191,36,.25)';
+  g.lineWidth = 10;
+  g.strokeRect(5, 5, WORLD.w - 10, WORLD.h - 10);
+  return c;
+}
+
+// ---------- 实体 ----------
+function hpBar(g, x, y, w, ratio, color) {
+  g.fillStyle = 'rgba(0,0,0,.6)';
+  g.fillRect(x - w / 2, y, w, 7);
+  g.fillStyle = color;
+  g.fillRect(x - w / 2, y, w * clamp(ratio, 0, 1), 7);
+}
+
+function drawBuildings(g, game) {
+  for (const t of game.towers) {
+    if (t.hp <= 0) {
+      g.fillStyle = 'rgba(75,85,99,.5)';
+      g.beginPath(); g.arc(t.x, t.y, 30, 0, Math.PI * 2); g.fill();
+      continue;
+    }
+    const color = TEAM_COLOR[t.team];
+    g.fillStyle = '#374151';
+    g.beginPath(); g.arc(t.x, t.y, 38, 0, Math.PI * 2); g.fill();
+    g.fillStyle = color;
+    g.beginPath(); g.arc(t.x, t.y, 24, 0, Math.PI * 2); g.fill();
+    g.fillStyle = '#f3f4f6';
+    g.beginPath(); g.arc(t.x, t.y - 18, 10, 0, Math.PI * 2); g.fill();
+    hpBar(g, t.x, t.y - 64, 90, t.hp / t.maxHp, color);
+  }
+  for (const c of game.crystals) {
+    if (c.hp <= 0) continue;
+    const color = TEAM_COLOR[c.team];
+    g.save();
+    g.translate(c.x, c.y);
+    g.rotate(Math.PI / 4);
+    g.fillStyle = color;
+    g.shadowColor = color; g.shadowBlur = 30;
+    g.fillRect(-34, -34, 68, 68);
+    g.shadowBlur = 0;
+    g.fillStyle = 'rgba(255,255,255,.75)';
+    g.fillRect(-16, -16, 32, 32);
+    g.restore();
+    hpBar(g, c.x, c.y - 78, 110, c.hp / c.maxHp, color);
+  }
+}
+
+function drawMinion(g, m) {
+  const color = TEAM_COLOR[m.team];
+  g.fillStyle = color;
+  g.beginPath();
+  if (m.type === 'melee') {
+    g.arc(m.x, m.y, 14, 0, Math.PI * 2);
+  } else {
+    g.moveTo(m.x, m.y - 16);
+    g.lineTo(m.x + 14, m.y + 11);
+    g.lineTo(m.x - 14, m.y + 11);
+    g.closePath();
+  }
+  g.fill();
+  g.strokeStyle = 'rgba(255,255,255,.5)';
+  g.lineWidth = 2;
+  g.stroke();
+  hpBar(g, m.x, m.y - 28, 34, m.hp / m.maxHp, color);
+}
+
+function drawHero(g, h, time) {
+  const teamColor = TEAM_COLOR[h.team];
+
+  // 脚下光圈（玩家金色高亮）
+  g.strokeStyle = h.isPlayer ? '#fbbf24' : teamColor;
+  g.lineWidth = h.isPlayer ? 4 : 2.5;
+  g.beginPath();
+  g.ellipse(h.x, h.y + 16, 26, 12, 0, 0, Math.PI * 2);
+  g.stroke();
+
+  // 身体
+  g.fillStyle = h.def.color;
+  g.beginPath(); g.arc(h.x, h.y, 22, 0, Math.PI * 2); g.fill();
+  g.strokeStyle = teamColor; g.lineWidth = 3.5;
+  g.stroke();
+
+  // 朝向指示
+  g.strokeStyle = 'rgba(255,255,255,.85)';
+  g.lineWidth = 4;
+  g.beginPath();
+  g.moveTo(h.x + Math.cos(h.facing) * 12, h.y + Math.sin(h.facing) * 12);
+  g.lineTo(h.x + Math.cos(h.facing) * 26, h.y + Math.sin(h.facing) * 26);
+  g.stroke();
+
+  // 回城读条
+  if (h.recallTimer >= 0) {
+    g.strokeStyle = '#60a5fa';
+    g.lineWidth = 5;
+    g.beginPath();
+    g.arc(h.x, h.y, 34, -Math.PI / 2, -Math.PI / 2 + (1 - h.recallTimer / 3) * Math.PI * 2);
+    g.stroke();
+  }
+
+  // 名字 / 等级 / 血条蓝条
+  g.font = 'bold 14px sans-serif';
+  g.textAlign = 'center';
+  g.fillStyle = '#f9fafb';
+  g.fillText(`${h.name} Lv.${h.level}`, h.x, h.y - 44);
+  hpBar(g, h.x, h.y - 38, 60, h.hp / h.maxHp, h.team === TEAM.BLUE ? '#4ade80' : '#f87171');
+  g.fillStyle = '#3b82f6';
+  g.fillRect(h.x - 30, h.y - 30, 60 * clamp(h.mp / h.maxMp, 0, 1), 3);
+}
+
+function drawEffect(g, e) {
+  const p = e.ttl / e.maxTtl; // 1 → 0
+  g.globalAlpha = p;
+  if (e.type === 'hit') {
+    g.fillStyle = e.color;
+    g.beginPath(); g.arc(e.x, e.y, e.r * (1.4 - p * 0.4), 0, Math.PI * 2); g.fill();
+  } else if (e.type === 'ring' || e.type === 'aoe') {
+    g.strokeStyle = e.color;
+    g.lineWidth = e.type === 'aoe' ? 8 : 5;
+    g.beginPath(); g.arc(e.x, e.y, e.r * (1.15 - p * 0.15), 0, Math.PI * 2); g.stroke();
+    if (e.type === 'aoe') {
+      g.globalAlpha = p * 0.25;
+      g.fillStyle = e.color;
+      g.fill();
+    }
+  } else if (e.type === 'slash') {
+    g.strokeStyle = e.color;
+    g.lineWidth = 7;
+    g.beginPath(); g.arc(e.x, e.y, e.r, -0.8, 0.8); g.stroke();
+  } else if (e.type === 'beam' && e.tx !== undefined) {
+    g.strokeStyle = e.color;
+    g.lineWidth = 4;
+    g.beginPath(); g.moveTo(e.x, e.y); g.lineTo(e.tx, e.ty); g.stroke();
+  }
+  g.globalAlpha = 1;
+}
+
+// ---------- 小地图 ----------
+function drawMinimap(g, game, canvas) {
+  const W = Math.min(190, canvas.width * 0.22), H = W * WORLD.h / WORLD.w;
+  const x0 = canvas.width - W - 10, y0 = 10;
+  const sx = W / WORLD.w, sy = H / WORLD.h;
+
+  g.fillStyle = 'rgba(11,18,32,.78)';
+  g.fillRect(x0, y0, W, H);
+  g.strokeStyle = 'rgba(148,163,184,.5)';
+  g.strokeRect(x0, y0, W, H);
+
+  const dot = (ex, ey, r, color) => {
+    g.fillStyle = color;
+    g.beginPath(); g.arc(x0 + ex * sx, y0 + ey * sy, r, 0, Math.PI * 2); g.fill();
+  };
+  for (const t of game.towers) if (t.hp > 0) dot(t.x, t.y, 3.5, TEAM_COLOR[t.team]);
+  for (const c of game.crystals) if (c.hp > 0) dot(c.x, c.y, 5, TEAM_COLOR[c.team]);
+  for (const m of game.minions) dot(m.x, m.y, 1.5, TEAM_COLOR[m.team]);
+  for (const h of game.heroes) {
+    if (h.dead) continue;
+    dot(h.x, h.y, h.isPlayer ? 5 : 3.5, h.isPlayer ? '#fbbf24' : TEAM_COLOR[h.team]);
+  }
+}
+
+// ===== js/ui/hud.js =====
+// HUD：血蓝条、技能冷却、比分、计时、击杀播报、复活倒计时
+
+
+function createHud() {
+  const $ = id => document.getElementById(id);
+  const els = {
+    hud: $('hud'),
+    hp: $('hp-bar').firstElementChild,
+    mp: $('mp-bar').firstElementChild,
+    meta: $('hero-meta'),
+    scoreBlue: $('score-blue'),
+    scoreRed: $('score-red'),
+    timer: $('game-timer'),
+    feed: $('kill-feed'),
+    respawn: $('respawn-overlay'),
+    respawnCount: $('respawn-count'),
+    skillBtns: [...document.querySelectorAll('.skill-btn[data-skill]')]
+  };
+
+  function show() { els.hud.classList.remove('hidden'); }
+  function hide() { els.hud.classList.add('hidden'); }
+
+  function setupSkills(hero) {
+    els.skillBtns.forEach((btn, i) => {
+      btn.querySelector('b').textContent = hero.skills[i].def.name;
+      btn.title = `${hero.skills[i].def.name}：${hero.skills[i].def.desc}（耗蓝 ${hero.skills[i].def.mana}）`;
+    });
+  }
+
+  function update(game) {
+    const me = playerHero(game);
+
+    els.hp.style.width = `${Math.max(0, me.hp / me.maxHp) * 100}%`;
+    els.mp.style.width = `${Math.max(0, me.mp / me.maxMp) * 100}%`;
+    els.meta.innerHTML =
+      `${me.name} <b>Lv.${me.level}</b> · 攻击 ${Math.round(me.atk)} · ` +
+      `金币 <b>${Math.floor(me.gold)}</b> · ${me.kills}/${me.deaths}`;
+
+    let blue = 0, red = 0;
+    for (const h of game.heroes) {
+      if (h.team === TEAM.BLUE) blue += h.kills; else red += h.kills;
+    }
+    els.scoreBlue.textContent = blue;
+    els.scoreRed.textContent = red;
+    const t = Math.floor(game.time);
+    els.timer.textContent =
+      `${String(Math.floor(t / 60)).padStart(2, '0')}:${String(t % 60).padStart(2, '0')}`;
+
+    // 技能冷却遮罩
+    els.skillBtns.forEach((btn, i) => {
+      const sk = me.skills[i];
+      const cdEl = btn.querySelector('.cd');
+      if (sk.cd > 0) {
+        cdEl.style.transform = `scaleY(${sk.cd / sk.def.cd})`;
+        cdEl.textContent = sk.cd > 1 ? Math.ceil(sk.cd) : '';
+      } else {
+        cdEl.style.transform = 'scaleY(0)';
+        cdEl.textContent = '';
+      }
+      btn.classList.toggle('ready', canCast(me, i));
+      btn.classList.toggle('noMana', sk.cd <= 0 && me.mp < sk.def.mana);
+    });
+
+    // 击杀播报
+    els.feed.innerHTML = game.killFeed.map(k => `<div>${k.text}</div>`).join('');
+
+    // 复活倒计时
+    if (me.dead) {
+      els.respawn.classList.remove('hidden');
+      els.respawnCount.textContent = Math.ceil(me.respawnTimer);
+    } else {
+      els.respawn.classList.add('hidden');
+    }
+  }
+
+  return { show, hide, update, setupSkills };
+}
+
+// ===== js/main.js =====
+// 入口：英雄选择 → 对局循环（AI + 逻辑 tick + 渲染 + HUD）→ 结算与存档同步
+
+
+
+
+
+
+
+
+const $ = id => document.getElementById(id);
+
+let profile = loadProfile(safeStorage);
+let selectedHero = profile.favoriteHero || 'jianhun';
+let game = null;
+let rafId = 0;
+let lastT = 0;
+
+const input = createInput();
+const renderer = createRenderer($('game'));
+const hud = createHud();
+
+// ---------- 英雄选择界面 ----------
+function renderProfileBar() {
+  const total = profile.wins + profile.losses;
+  $('profile-bar').innerHTML = total
+    ? `${profile.name} · 战绩 <b>${profile.wins}胜 ${profile.losses}负</b> · 总击杀 <b>${profile.totalKills}</b>`
+    : `${profile.name} · 欢迎来到王者竞技场，开始你的第一场对局吧！`;
+}
+
+function renderHeroList() {
+  $('hero-list').innerHTML = HERO_DEFS.map(h => `
+    <div class="hero-card ${h.id === selectedHero ? 'selected' : ''}" data-id="${h.id}" style="color:${h.color}">
+      <div class="avatar">${h.name[0]}</div>
+      <div><b>${h.name}</b></div>
+      <div class="role">${h.role}</div>
+      <div class="desc">${h.desc}</div>
+    </div>`).join('');
+  for (const card of document.querySelectorAll('.hero-card')) {
+    card.addEventListener('click', () => {
+      selectedHero = card.dataset.id;
+      renderHeroList();
+    });
+  }
+}
+
+// ---------- 同步码 ----------
+$('btn-export').addEventListener('click', () => {
+  const code = exportCode(profile);
+  $('sync-code').value = code;
+  if (navigator.clipboard) navigator.clipboard.writeText(code).catch(() => {});
+});
+$('btn-import').addEventListener('click', () => {
+  const incoming = importCode($('sync-code').value);
+  if (!incoming) {
+    $('sync-code').value = '';
+    $('sync-code').placeholder = '同步码无效，请检查后重试';
+    return;
+  }
+  profile = mergeProfiles(profile, incoming);
+  saveProfile(safeStorage, profile);
+  selectedHero = profile.favoriteHero || selectedHero;
+  renderProfileBar();
+  renderHeroList();
+  $('sync-code').value = '';
+  $('sync-code').placeholder = '同步成功！战绩已合并';
+});
+
+// ---------- 对局流程 ----------
+function startGame() {
+  game = createGame(selectedHero, Date.now() & 0xffff);
+  $('select-screen').classList.add('hidden');
+  $('end-screen').classList.add('hidden');
+  hud.setupSkills(playerHero(game));
+  hud.show();
+  lastT = performance.now();
+  cancelAnimationFrame(rafId);
+  rafId = requestAnimationFrame(loop);
+}
+
+function loop(now) {
+  const dt = Math.min((now - lastT) / 1000, 0.05); // 防止切后台后的大步长
+  lastT = now;
+
+  if (game.state === 'playing') {
+    applyInput(input, playerHero(game), dt);
+    runBots(game);
+    tick(game, dt);
+  }
+
+  renderer.render(game);
+  hud.update(game);
+
+  if (game.state === 'ended') {
+    endGame();
+    return;
+  }
+  rafId = requestAnimationFrame(loop);
+}
+
+function endGame() {
+  const me = playerHero(game);
+  const won = game.winner === TEAM.BLUE;
+  recordMatch(profile, { won, kills: me.kills, deaths: me.deaths, heroId: me.heroId });
+  saveProfile(safeStorage, profile);
+
+  hud.hide();
+  const title = $('end-title');
+  title.textContent = won ? '胜 利' : '失 败';
+  title.className = won ? 'win' : 'lose';
+  const mins = Math.floor(game.time / 60), secs = Math.floor(game.time % 60);
+  $('end-stats').innerHTML =
+    `对局时长 ${mins} 分 ${secs} 秒<br>` +
+    `${me.name} · ${me.kills} 击杀 / ${me.deaths} 阵亡 · 等级 ${me.level} · 金币 ${Math.floor(me.gold)}<br>` +
+    `生涯战绩：${profile.wins} 胜 ${profile.losses} 负`;
+  $('end-screen').classList.remove('hidden');
+}
+
+$('btn-start').addEventListener('click', startGame);
+$('btn-again').addEventListener('click', () => {
+  $('end-screen').classList.add('hidden');
+  $('select-screen').classList.remove('hidden');
+  renderProfileBar();
+  renderHeroList();
+});
+
+renderProfileBar();
+renderHeroList();
+</script>
+</body>
+</html>
